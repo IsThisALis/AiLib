@@ -19,8 +19,8 @@ publishing {
             from(components["java"])
 
             pom {
-                name.set("my-lib")
-                description.set("My library")
+                name.set("AiLib")
+                description.set("Library for interactions with AI")
                 url.set("https://github.com/IsThisALis/AiLib")
 
                 licenses {
