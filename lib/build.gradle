@@ -15,7 +15,7 @@ repositories {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        maven(MavenPublication) {
             from(components["java"])
 
             pom {
