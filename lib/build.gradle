@@ -1,0 +1,82 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+
+group = "io.github.isthisalis"
+version = "1.0.0"
+
+
+repositories {
+    mavenCentral()
+}
+
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+
+            pom {
+                name.set("my-lib")
+                description.set("My library")
+                url.set("https://github.com/IsThisALis/AiLib")
+
+                licenses {
+                    license {
+                        name.set("MIT")
+                    }
+                }
+
+                developers {
+                    developer {
+                        id.set("IsThisALis")
+                        email.set("gamemodebronze2@gmail.com")
+                    }
+                }
+
+                scm {
+                    url.set("https://github.com/IsThisALis/AiLib")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "github"
+            url = uri("https://maven.pkg.github.com/IsThisALis/AiLib")
+            credentials {
+                username = System.getenv("GITHUB_USER")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
+
+dependencies {
+    testImplementation libs.junit.jupiter
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'tools.jackson.core:jackson-databind:3.2.0'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-yaml:3.2.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.46'
+    annotationProcessor 'org.projectlombok:lombok:1.18.46'
+}
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+}
+
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
