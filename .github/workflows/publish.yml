@@ -23,7 +23,7 @@ jobs:
 
       # --- GitHub Packages ---
       - name: Publish to GitHub Packages
-        run: ./gradlew publishMavenPublicationToGithubRepository
+        run: ./gradlew publishMavenPublicationToGithubRepository -PgithubUsername=${{ github.actor }} -PgithubToken=${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
