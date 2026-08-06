@@ -1,64 +1,60 @@
 plugins {
     id 'java-library'
-    id 'maven-publish'
+    id 'com.vanniktech.maven.publish' version '0.34.0'
+}
+
+apply plugin: 'signing'
+signing {
+    useGpgCmd()
+    sign publishing.publications
 }
 
 
-group = "io.github.isthisalis"
-version = "1.0.0"
-
+group = 'io.github.isthisalis'
+version = '1.0.0'
 
 repositories {
     mavenCentral()
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from(components["java"])
+mavenPublishing {
+    publishToMavenCentral()
 
-            pom {
-                name.set("AiLib")
-                description.set("Library for interactions with AI")
-                url.set("https://github.com/IsThisALis/AiLib")
+    coordinates('io.github.isthisalis', 'ailib', '1.0.0')
 
-                licenses {
-                    license {
-                        name.set("MIT")
-                    }
-                }
+    pom {
+        name = 'AiLib'
+        description = 'Library for interactions with AI'
+        url = 'https://github.com/IsThisALis/AiLib'
 
-                developers {
-                    developer {
-                        id.set("IsThisALis")
-                        email.set("gamemodebronze2@gmail.com")
-                    }
-                }
-
-                scm {
-                    url.set("https://github.com/IsThisALis/AiLib")
-                }
+        licenses {
+            license {
+                name = 'MIT'
+                url = 'https://opensource.org/licenses/MIT'
             }
         }
-    }
 
-    repositories {
-        maven {
-            name = "github"
-            url = uri("https://maven.pkg.github.com/IsThisALis/AiLib")
-            credentials {
-                username = System.getenv("GITHUB_USER")
-                password = System.getenv("GITHUB_TOKEN")
+        developers {
+            developer {
+                id = 'IsThisALis'
+                email = 'gamemodebronze2@gmail.com'
             }
+        }
+
+        scm {
+            url = 'https://github.com/IsThisALis/AiLib'
         }
     }
 }
 
-
 dependencies {
     testImplementation libs.junit.jupiter
-
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     implementation 'tools.jackson.core:jackson-databind:3.2.0'
@@ -68,15 +64,14 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.46'
 }
 
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-    withSourcesJar()
-}
-
-
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+afterEvaluate {
+    tasks.configureEach { task ->
+        if (task.name.contains('generateMetadataFile')) {
+            task.dependsOn tasks.matching { it.name.contains('JavadocJar') }
+        }
+    }
 }
