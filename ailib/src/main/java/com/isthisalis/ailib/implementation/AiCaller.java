@@ -2,11 +2,15 @@ package com.isthisalis.ailib.implementation;
 
 import com.isthisalis.ailib.api.ai.AiService;
 import com.isthisalis.ailib.api.ai.tools.ToolCallParser;
+import com.isthisalis.ailib.exception.ApiException;
+import com.isthisalis.ailib.exception.HttpIOException;
 import com.isthisalis.ailib.api.Configuration;
 
 import com.isthisalis.ailib.util.JSON;
 
 import com.isthisalis.ailib.util.DTO.request.Message;
+
+import lombok.NonNull;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,45 +26,47 @@ import java.util.logging.Logger;
 public class AiCaller implements AiService {
     
 
-  private static HttpClient http = HttpClient.newHttpClient();
-  private HttpRequest request;
-  private HttpResponse<String> response;
+  private static final HttpClient HTTP = HttpClient.newHttpClient();
+  private volatile HttpRequest request;
+  private volatile HttpResponse<String> response;
 
-  private Configuration config;
   private JSON json;
 
   private Logger logger = Logger.getGlobal();
 
-  private String rawJson;
   private String model;
   private String apiKey;
   private String apiUrl;
 
 
-  public AiCaller(Configuration config, ToolCallParser toolCallParser) {
-    this.config = config;
+  /**
+   * Constructor for AI service base implementation class.
+   * 
+   * @param config Configuration for AI API provider data. 
+   * @see com.isthisalis.ailib.api.Configuration.
+   * @param toolCallParser Tool Calling processor implementation. 
+   * @see com.isthisalis.ailib.api.ai.ToolCallParser.
+   */
+  public AiCaller(@NonNull Configuration config, ToolCallParser toolCallParser) {
     json = new JSON(config, this, toolCallParser);
     model = config.getModel();
     apiKey = config.getApiKey();
     apiUrl = config.getApiUrl();
   }
 
-  public void update(Configuration config, ToolCallParser toolCallParser) {
-    this.config = config;
+  public void update(@NonNull Configuration config, ToolCallParser toolCallParser) {
     if (toolCallParser != null) json = new JSON(config, this, toolCallParser);
     model = config.getModel();
     apiKey = config.getApiKey();
     apiUrl = config.getApiUrl();
   }
 
-  public void update() {
-    model = config.getModel();
-    apiKey = config.getApiKey();
-  }
 
     @Override
-  public String ask(String message) {
+  public String ask(String message) throws ApiException, HttpIOException {
+    String rawJson;
     List<Message> history = json.createInitialStory(message);
+
     try {
       rawJson = json.makeAiRequest(history);
     } catch (Exception e) {
@@ -76,46 +82,38 @@ public class AiCaller implements AiService {
 
     try {
       logger.info("Request sent to: "+model);
-      response = http.send(request, HttpResponse.BodyHandlers.ofString());
+      response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
       logger.info(response.body().trim());
 
-      if (response.statusCode() != 200) throw new RuntimeException("API error: " + response.statusCode() + ": " + response.body());
-      if (response != null) { logger.info("Got response from " + model + " response: " + response); }
+      if (response.statusCode() != 200) throw new ApiException(response.statusCode(), response.body());
+      if (response != null) { logger.info("Got response from " + model); }
+
     } catch (Exception e) {
-      logger.warning("Error! "+e);
-      e.printStackTrace();
-      return "none";
+      if (!e.getClass().equals(ApiException.class)) throw new HttpIOException(e.getMessage());
      }
     return json.parseAiResponse(history, response.body());
   }
 
 
   @Override
-  public String request(String json) {
+  public String request(String json) throws ApiException, HttpIOException {
         request = HttpRequest.newBuilder()
           .uri(URI.create(apiUrl))
           .header("Authorization", "Bearer " + apiKey)
           .header("Content-Type", "application/json")
-          .POST(HttpRequest.BodyPublishers.ofString(rawJson))
+          .POST(HttpRequest.BodyPublishers.ofString(json))
           .build();
 
-
     try {
-      response = http.send(request, HttpResponse.BodyHandlers.ofString());
+      response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
       logger.info("Request sent to: "+model);
 
-      if (response.statusCode() == 404) { logger.warning("No model: " + model + " found, check your model name (404 ERROR)"); return "none"; }
-
-      if (response.statusCode() == 429) { logger.warning("Model quota exceeded, model: " + model + ", try again later (429 ERROR)"); return "none"; }
-
-      if (response.statusCode() != 200) { logger.warning("Unexpected API error: " + response.statusCode() + "" + response.body()); return "none"; }
+      if (response.statusCode() != 200) { throw new ApiException(response.statusCode(), response.body()); }
 
       if (response != null) { logger.info("Got response from " + model + " response: " + response); }
 
     } catch (Exception e) {
-      logger.warning(e.toString());
-      e.printStackTrace();
-      return "none";
+      if (!e.getClass().equals(ApiException.class)) throw new HttpIOException(e.getMessage());
      }
     return response.body();
   }
