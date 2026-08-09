@@ -11,7 +11,6 @@ import lombok.NonNull;
 public interface AiService {
 
   public void update(@NonNull Configuration config, ToolCallParser ToolCallParser);
-  public void update();
 
   public String ask(@NonNull String message);
   public String request(@NonNull String json);
