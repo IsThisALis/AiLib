@@ -11,7 +11,7 @@ signing {
 
 
 group = 'io.github.isthisalis'
-version = '1.0.2'
+version = '1.0.3'
 
 repositories {
     mavenCentral()
@@ -70,8 +70,8 @@ dependencies {
     testImplementation libs.junit.jupiter
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    implementation 'tools.jackson.core:jackson-databind:3.2.0'
-    implementation 'tools.jackson.dataformat:jackson-dataformat-yaml:3.2.0'
+    implementation 'tools.jackson.core:jackson-databind:3.2.1'
+    implementation 'tools.jackson.dataformat:jackson-dataformat-yaml:3.2.1'
 
     compileOnly 'org.projectlombok:lombok:1.18.46'
     annotationProcessor 'org.projectlombok:lombok:1.18.46'
