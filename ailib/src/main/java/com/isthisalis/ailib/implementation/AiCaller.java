@@ -10,6 +10,7 @@ import com.isthisalis.ailib.util.JSON;
 
 import com.isthisalis.ailib.util.DTO.request.Message;
 
+import lombok.Getter;
 import lombok.NonNull;
 
 import java.net.URI;
@@ -30,7 +31,7 @@ public class AiCaller implements AiService {
   private volatile HttpRequest request;
   private volatile HttpResponse<String> response;
 
-  private JSON json;
+  private @Getter JSON json;
 
   private Logger logger = Logger.getGlobal();
 
@@ -54,6 +55,14 @@ public class AiCaller implements AiService {
     apiUrl = config.getApiUrl();
   }
 
+  /**
+   * Updates AiCaller data.
+   * 
+   * @param config Configuration for API provider data.
+   * @see com.isthisalis.ailib.api.Configuration.
+   * @param toolCallParser Tool Calling processor implementation. 
+   * @see com.isthisalis.ailib.api.ai.ToolCallParser.
+   */
   public void update(@NonNull Configuration config, ToolCallParser toolCallParser) {
     if (toolCallParser != null) json = new JSON(config, this, toolCallParser);
     model = config.getModel();
@@ -62,6 +71,12 @@ public class AiCaller implements AiService {
   }
 
 
+    /**
+     * Sends HTTP query to API provider using API key, URL and AI model.
+     * 
+     * @param message Message to AI model.
+     * @return AI response as String.
+     */
     @Override
   public String ask(String message) throws ApiException, HttpIOException {
     String rawJson;
@@ -95,6 +110,12 @@ public class AiCaller implements AiService {
   }
 
 
+  /**
+   * Sends request to AI model, using pre-built JSON.
+   * 
+   * @param json JSON to be sent as request.
+   * @return JSON response as String.
+   */
   @Override
   public String request(String json) throws ApiException, HttpIOException {
         request = HttpRequest.newBuilder()
@@ -104,17 +125,14 @@ public class AiCaller implements AiService {
           .POST(HttpRequest.BodyPublishers.ofString(json))
           .build();
 
-    try {
-      response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-      logger.info("Request sent to: "+model);
+      try { response = HTTP.send(request, HttpResponse.BodyHandlers.ofString()); }
+      catch (Exception e) {
+        throw new HttpIOException(e.getMessage());
+      }
 
       if (response.statusCode() != 200) { throw new ApiException(response.statusCode(), response.body()); }
 
-      if (response != null) { logger.info("Got response from " + model + " response: " + response); }
-
-    } catch (Exception e) {
-      if (!e.getClass().equals(ApiException.class)) throw new HttpIOException(e.getMessage());
-     }
-    return response.body();
+      if (response != null) { logger.info("Got response from " + model); }
+      return response.body();
   }
 }
