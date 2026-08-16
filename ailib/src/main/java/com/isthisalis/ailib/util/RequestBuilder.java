@@ -4,94 +4,101 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.type.TypeReference;
 
 import com.isthisalis.ailib.util.DTO.request.AiRequest;
-import com.isthisalis.ailib.util.DTO.request.Message;
 import com.isthisalis.ailib.util.DTO.request.Tool;
+import com.isthisalis.ailib.util.DTO.Message;
 import com.isthisalis.ailib.util.DTO.ToolCall;
 import com.isthisalis.ailib.util.DTO.response.AiResponse;
+import com.isthisalis.ailib.util.DTO.response.AiResponse.Choice;
 
 import lombok.NonNull;
 
 import com.isthisalis.ailib.api.Configuration;
 import com.isthisalis.ailib.api.ai.AiService;
 import com.isthisalis.ailib.api.ai.tools.ToolCallParser;
-import com.isthisalis.ailib.exception.ApiException;
-import com.isthisalis.ailib.exception.HttpIOException;
+
+import com.isthisalis.ailib.exception.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * JSON parser. Wraps and unwraps content.
+ * Builds requests to AI and parses responses.
  */
-public class JSON {
+public class RequestBuilder {
 
   private static Logger logger = Logger.getGlobal();
   private ObjectMapper mapper = new ObjectMapper();
   private AiService ai;
   private ToolCallParser toolCallParser;
 
-  private String bio;
-  private String rules;
   private String model;
+  private String systemPrompt;
   private List<Tool> tools = new ArrayList<>();
 
-  public JSON(@NonNull Configuration config, AiService ai, ToolCallParser toolParser) {
-    model = config.getModel();
-    bio = config.getBio();
-    rules = config.getRules();
+  public RequestBuilder(@NonNull Configuration config, AiService ai, ToolCallParser toolParser) {
+    this.model = config.getModel();
+    this.systemPrompt = config.getBio() + "\n\n" + config.getRules();
     this.ai = ai;
     this.toolCallParser = toolParser;
   }
 
-  public String makeAiRequest(String message) throws Exception {
-    var settings = new Message("system", bio + "\n\n" + rules);
-    var userMsg = new Message("user", message);
-    var request = new AiRequest(model, List.of(settings, userMsg), tools);
+  public AiRequest makeAiRequest(String message) throws Exception {
+    var settings = Message.system(systemPrompt);
+    var userMsg = Message.user(message);
+    var request = AiRequest.builder()
+    .model(model)
+    .messages(List.of(settings, userMsg))
+    .tools(tools)
+    .build();
 
-    return mapper.writeValueAsString(request);
+    return request;
   }
 
 
-  public String makeAiRequest(List<Message> history) throws Exception {
-    var req = new AiRequest(model, history, tools);
+  public AiRequest makeAiRequest(List<Message> history) throws Exception {
+    var request = AiRequest.builder()
+    .model(model)
+    .messages(history)
+    .tools(tools)
+    .build();
 
-    return mapper.writeValueAsString(req);
+    return request;
   }
 
   public String parseAiResponse(List<Message> currHistory, String json) throws ApiException, HttpIOException {
     String newResp = null;
-    var response = mapper.readValue(json, AiResponse.class);
-    var choice = response.choices().get(0);
-    var msg = choice.message();
+    AiResponse response = mapper.readValue(json, AiResponse.class);
+    Choice choice = response.getChoices().get(0);
+    Message msg = choice.getMessage();
 
     if (msg.content() != null && !msg.content().isBlank()) { logger.info(msg.content()); return msg.content(); }
 
     if (msg.toolCalls() != null && !msg.toolCalls().isEmpty()) {
       logger.info("Tool Called by: " + model);
-      currHistory.add(new Message(msg.role(), msg.content(), msg.toolCalls()));
+      currHistory.add(Message.assistant(msg.content(), msg.toolCalls()));
 
       for (ToolCall toolCall : msg.toolCalls()) {
         currHistory.add(toolCallParser.parseToolCalls(toolCall));
       }
 
-      var newReq = new AiRequest(model, currHistory, tools);
+      AiRequest newReq = AiRequest.builder().model(model).messages(currHistory).tools(tools).build();
       String newJson = mapper.writeValueAsString(newReq);
       newResp = ai.request(newJson); 
       }
 
-      return parseAiResponse(currHistory, newResp);
+      return newResp;
   }
 
 
-  public List<Message> createInitialStory(String msg) {
-      var settings = new Message("system", bio + "\n\n" + rules);
-      var usrMsg = new Message("user", msg);
+  public List<Message> createInitialHistory(String msg) {
+      Message settings = Message.system(systemPrompt);
+      Message usrMsg = Message.user(msg);
       return new java.util.ArrayList<>(List.of(settings, usrMsg));
-  }
+  } 
 
 
-  public void makeTools(String json) {
+  public void loadTools(String json) {
     if (tools != null) return;
 
     try {
@@ -99,5 +106,10 @@ public class JSON {
     } catch (Exception e) {
       logger.warning("" + e);
     }
+  }
+
+
+  public String read(Object val) {
+    return mapper.writeValueAsString(val);
   }
 }
