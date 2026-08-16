@@ -2,8 +2,8 @@ package com.isthisalis.ailib.api.ai.tools;
 
 import java.util.List;
 
+import com.isthisalis.ailib.util.DTO.Message;
 import com.isthisalis.ailib.util.DTO.ToolCall;
-import com.isthisalis.ailib.util.DTO.request.Message;
 
 public interface ToolCallParser {
     
