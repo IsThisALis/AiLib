@@ -4,13 +4,16 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.type.TypeReference;
 
 import com.isthisalis.ailib.util.DTO.request.AiRequest;
+import com.isthisalis.ailib.util.DTO.request.RequestParams;
 import com.isthisalis.ailib.util.DTO.request.Tool;
 import com.isthisalis.ailib.util.DTO.Message;
 import com.isthisalis.ailib.util.DTO.ToolCall;
 import com.isthisalis.ailib.util.DTO.response.AiResponse;
 import com.isthisalis.ailib.util.DTO.response.AiResponse.Choice;
 
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 
 import com.isthisalis.ailib.api.Configuration;
 import com.isthisalis.ailib.api.ai.AiService;
@@ -35,6 +38,7 @@ public class RequestBuilder {
   private String model;
   private String systemPrompt;
   private List<Tool> tools = new ArrayList<>();
+  private @Getter @Setter RequestParams requestParams;
 
   public RequestBuilder(@NonNull Configuration config, AiService ai, ToolCallParser toolParser) {
     this.model = config.getModel();
@@ -52,6 +56,8 @@ public class RequestBuilder {
     .tools(tools)
     .build();
 
+    if (requestParams != null) { request.setParams(requestParams); }
+
     return request;
   }
 
@@ -62,6 +68,8 @@ public class RequestBuilder {
     .messages(history)
     .tools(tools)
     .build();
+
+    if (requestParams != null) { request.setParams(requestParams); }
 
     return request;
   }
