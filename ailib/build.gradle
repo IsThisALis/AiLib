@@ -11,7 +11,7 @@ signing {
 
 
 group = 'io.github.isthisalis'
-version = '1.0.3'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
